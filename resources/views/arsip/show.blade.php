@@ -28,11 +28,32 @@
                 @else
                     <span class="badge badge-musnah">STATUS: {{ strtoupper($arsip->status_arsip) }}</span>
                 @endif
+
+                @if ($arsip->status_ketersediaan === 'tersedia')
+                    <span class="badge badge-tersedia">📦 FISIK: TERSEDIA</span>
+                @else
+                    <span class="badge badge-dipinjam">📤 FISIK: SEDANG DIPINJAM</span>
+                @endif
             </div>
             <h1 style="margin: 0; font-size: 22px; color: #1e293b;">{{ $arsip->judul_arsip }}</h1>
         </div>
 
-        <div style="display: flex; gap: 8px;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            @if ($arsip->status_arsip === 'musnah' && $arsip->no_berita_acara_pemusnahan)
+                <a href="{{ route('penyusutan.cetak', $arsip->no_berita_acara_pemusnahan) }}" target="_blank" class="btn" style="background:#0284c7; color:#fff;">
+                    📜 Cetak Berita Acara Legal
+                </a>
+            @elseif (auth()->user()->role === 'petugas' && $arsip->isLayakMusnah())
+                <a href="{{ route('penyusutan.create', ['id_arsip' => $arsip->id_arsip]) }}" class="btn btn-danger">
+                    🔥 Usulkan Pemusnahan (JRA)
+                </a>
+            @endif
+
+            @if (auth()->user()->role === 'petugas' && $arsip->status_ketersediaan === 'tersedia' && $arsip->status_arsip !== 'musnah')
+                <a href="{{ route('sirkulasi.create', ['id_arsip' => $arsip->id_arsip]) }}" class="btn btn-secondary">
+                    📤 Ajukan Pinjam Berkas
+                </a>
+            @endif
             @if ($hasDigitalFile)
                 <a href="{{ route('arsip.preview', $arsip->id_arsip) }}" target="_blank" class="btn btn-success">
                     👁️ Buka PDF Penuh
@@ -43,6 +64,12 @@
             @endif
         </div>
     </div>
+
+    @if ($arsip->isLegalHold())
+        <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 10px 14px; margin-top: 14px; font-size: 13px; color: #991b1b; border-radius: 4px;">
+            <strong>🛡️ STATUS PROTEKSI KEARSIPAN (LEGAL HOLD):</strong> {{ $arsip->alasan_legal_hold }}
+        </div>
+    @endif
 </div>
 
 <div class="grid-2">
@@ -303,5 +330,102 @@
             @endif
         </div>
     </div>
+</div>
+
+<!-- Log Riwayat Sirkulasi & Peminjaman Berkas (Audit Trail Sprint 4) -->
+<div class="card" style="margin-top: 24px; padding: 0; overflow-x: auto;">
+    <div style="padding: 16px 20px 8px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h3 style="margin: 0; color: #1f3864;">
+                📜 Buku Kendali & Riwayat Sirkulasi Berkas (Audit Trail)
+            </h3>
+            <p style="margin: 2px 0 0 0; color: #64748b; font-size: 13px;">
+                Rekam jejak komprehensif siapa saja yang meminjam, izin approval pimpinan, serta catatan rekonsiliasi pengembalian fisik.
+            </p>
+        </div>
+        @if (auth()->user()->role === 'petugas' && $arsip->status_ketersediaan === 'tersedia')
+            <a href="{{ route('sirkulasi.create', ['id_arsip' => $arsip->id_arsip]) }}" class="btn btn-sm btn-success">
+                + Ajukan Pinjam Berkas Ini
+            </a>
+        @endif
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 40px;">No</th>
+                <th>Peminjam & Divisi</th>
+                <th>Keperluan Peminjaman</th>
+                <th>Tgl Pinjam & Rencana</th>
+                <th>Otorisasi Pimpinan</th>
+                <th>Status Fisik / Sirkulasi</th>
+                <th>Tgl Kembali & Catatan</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse ($arsip->riwayatPeminjaman as $idx => $pinjam)
+                <tr>
+                    <td>{{ $idx + 1 }}</td>
+                    <td>
+                        <strong style="color: #1e293b;">{{ $pinjam->nama_peminjam }}</strong>
+                        <div style="font-size: 11px; color: #64748b;">Divisi: {{ $pinjam->divisi }}</div>
+                    </td>
+                    <td style="max-width: 220px; font-size: 13px;">
+                        {{ $pinjam->keperluan }}
+                    </td>
+                    <td style="font-size: 12px; white-space: nowrap;">
+                        <div>Pinjam: <strong>{{ $pinjam->tanggal_pinjam?->format('d/m/Y') }}</strong></div>
+                        <div>Rencana: <strong>{{ $pinjam->tanggal_kembali_rencana?->format('d/m/Y') }}</strong></div>
+                    </td>
+                    <td>
+                        @if ($pinjam->status_approval === 'menunggu')
+                            <span class="badge badge-menunggu">Menunggu Approval</span>
+                        @elseif ($pinjam->status_approval === 'disetujui')
+                            <span class="badge badge-disetujui">Disetujui</span>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                                Oleh: {{ $pinjam->approver?->name ?? 'Pimpinan' }}
+                            </div>
+                        @else
+                            <span class="badge badge-ditolak">Ditolak</span>
+                        @endif
+                    </td>
+                    <td>
+                        @if ($pinjam->status_sirkulasi === 'kembali')
+                            <span class="badge badge-kembali">Telah Kembali</span>
+                        @elseif ($pinjam->isTerlambat())
+                            <span class="badge badge-terlambat">⚠️ Terlambat {{ $pinjam->hari_terlambat }} Hari</span>
+                        @elseif ($pinjam->status_approval === 'menunggu')
+                            <span class="badge badge-menunggu">Permohonan</span>
+                        @elseif ($pinjam->status_approval === 'ditolak')
+                            <span class="badge badge-ditolak">Ditolak</span>
+                        @else
+                            <span class="badge badge-dipinjam">Sedang Dipinjam</span>
+                        @endif
+                    </td>
+                    <td style="font-size: 12px;">
+                        @if ($pinjam->tanggal_kembali_aktual)
+                            <div style="color: #166534; font-weight: bold;">
+                                {{ $pinjam->tanggal_kembali_aktual?->format('d/m/Y') }}
+                            </div>
+                            <div style="color: #475569; font-style: italic; margin-top: 2px;">
+                                "{{ $pinjam->catatan_pengembalian }}"
+                            </div>
+                            <div style="color: #94a3b8; font-size: 10px; margin-top: 1px;">
+                                Diterima: {{ $pinjam->petugasKembali?->name ?? '-' }}
+                            </div>
+                        @else
+                            <span style="color: #94a3b8;">Belum kembali</span>
+                        @endif
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">
+                        Belum pernah ada riwayat sirkulasi peminjaman untuk berkas fisik ini.
+                    </td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
 </div>
 @endsection

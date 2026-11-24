@@ -83,7 +83,12 @@ class ArsipDokumenController extends Controller
             $query->where('status_arsip', $request->input('status_arsip'));
         }
 
-        // 8. Filter Lokasi
+        // 8. Filter Ketersediaan Fisik (Sprint 4: Tersedia / Dipinjam)
+        if ($request->filled('status_ketersediaan')) {
+            $query->where('status_ketersediaan', $request->input('status_ketersediaan'));
+        }
+
+        // 9. Filter Lokasi
         if ($request->filled('id_lokasi')) {
             $query->where('id_lokasi', $request->input('id_lokasi'));
         }
@@ -94,7 +99,7 @@ class ArsipDokumenController extends Controller
             'items' => $items,
             'klasifikasiList' => KlasifikasiArsip::orderBy('kode_klasifikasi')->get(),
             'lokasiList' => LokasiArsip::orderBy('kode_lokasi')->get(),
-            'filters' => $request->only(['q', 'id_arsip', 'nama_anggota', 'no_rekening', 'kode_klasifikasi', 'jenis_berkas', 'status_arsip', 'id_lokasi']),
+            'filters' => $request->only(['q', 'id_arsip', 'nama_anggota', 'no_rekening', 'kode_klasifikasi', 'jenis_berkas', 'status_arsip', 'status_ketersediaan', 'id_lokasi']),
             'totalHasil' => $items->count(),
             'totalKeseluruhan' => ArsipDokumen::count(),
         ]);

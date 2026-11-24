@@ -50,7 +50,7 @@ class TransaksiSeeder extends Seeder
             ['ARC-KP.01/KSP-KRD/2026/0007', 'KP.01', 4, 'KRD-2025-0004', 'Formulir Pengajuan Pinjaman An. Dewi Lestari', '2025-05-20'],
             ['ARC-KS.01/KSP-SMP/2026/0008', 'KS.01', 4, 'SMP-0008', 'Buku Simpanan Pokok & Wajib An. Maya Sari', '2020-01-15'],
             ['ARC-KS.02/KSP-SMP/2026/0009', 'KS.02', 4, 'SMP-0002', 'Rekening Koran An. Siti Rahayu (Semester I 2026)', '2026-07-01'],
-            ['ARC-KU.01/KSP-KEU/2026/0010', 'KU.01', 4, null, 'Kuitansi Kas Keluar Oktober 2026', '2026-10-31'],
+            ['ARC-KU.01/KSP-KEU/2026/0010', 'KU.01', 4, null, 'Kuitansi Kas Keluar Oktober 2026', '2022-10-31'],
         ];
 
         foreach ($arsip as $a) {
@@ -75,14 +75,73 @@ class TransaksiSeeder extends Seeder
                 'media_arsip' => $media,
                 'file_digital_path' => $filePath,
                 'status_arsip' => $jra['status_arsip'],
+                'status_ketersediaan' => $a[0] === 'ARC-KP.03/KSP-KRD/2026/0001' ? 'dipinjam' : 'tersedia',
                 'jadwal_retensi_inaktif' => $jra['jadwal_retensi_inaktif'],
                 'jadwal_penyusutan' => $jra['jadwal_penyusutan'],
             ]);
         }
 
-        // Kasus skenario: sertifikat Budi dipinjam setahun lalu dan belum kembali
+        $pimpinan = DB::table('users')->where('role', 'pimpinan')->value('id');
+        $petugas = DB::table('users')->where('role', 'petugas')->value('id');
+
+        // Skenario 1 (Sprint 4): Sertifikat Budi dipinjam tahun lalu, status disetujui, belum kembali (terlambat)
         DB::table('peminjaman_arsip')->insert([
-            ['id_arsip' => 'ARC-KP.03/KSP-KRD/2026/0001', 'nama_peminjam' => 'Rudi Hartono', 'divisi' => 'Marketing', 'keperluan' => 'Verifikasi ulang data agunan', 'tanggal_pinjam' => '2025-10-20', 'tanggal_kembali_rencana' => '2025-10-27', 'status_sirkulasi' => 'terlambat'],
+            [
+                'id_arsip' => 'ARC-KP.03/KSP-KRD/2026/0001',
+                'nama_peminjam' => 'Rudi Hartono',
+                'divisi' => 'Marketing',
+                'keperluan' => 'Verifikasi ulang data agunan debitur macet ke lapangan',
+                'tanggal_pinjam' => '2025-10-20',
+                'tanggal_kembali_rencana' => '2025-10-27',
+                'status_sirkulasi' => 'terlambat',
+                'status_approval' => 'disetujui',
+                'disetujui_oleh' => $pimpinan,
+                'tanggal_approval' => '2025-10-20 09:15:00',
+                'catatan_approval' => 'Disetujui. Pastikan berkas dibawa dengan tas berkas tahan air dan dikembalikan tepat waktu.',
+                'tanggal_kembali_aktual' => null,
+                'catatan_pengembalian' => null,
+                'petugas_pengembalian' => null,
+                'created_at' => '2025-10-20 08:30:00',
+                'updated_at' => '2025-10-20 09:15:00',
+            ],
+            // Skenario 2 (Sprint 4): Permohonan pinjam baru diajukan Jerry (Remedial), menunggu approval pimpinan
+            [
+                'id_arsip' => 'ARC-KP.03/KSP-KRD/2026/0002',
+                'nama_peminjam' => 'Jerry Pratama',
+                'divisi' => 'Remedial & Penagihan',
+                'keperluan' => 'Pengecekan fisik nomor rangka BPKB ke Samsat & estimasi nilai lelang jaminan',
+                'tanggal_pinjam' => now()->toDateString(),
+                'tanggal_kembali_rencana' => now()->addDays(3)->toDateString(),
+                'status_sirkulasi' => 'dipinjam',
+                'status_approval' => 'menunggu',
+                'disetujui_oleh' => null,
+                'tanggal_approval' => null,
+                'catatan_approval' => null,
+                'tanggal_kembali_aktual' => null,
+                'catatan_pengembalian' => null,
+                'petugas_pengembalian' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            // Skenario 3 (Sprint 4): Riwayat peminjaman arsip yang sudah disetujui dan dikembalikan tepat waktu
+            [
+                'id_arsip' => 'ARC-KP.03/KSP-KRD/2026/0003',
+                'nama_peminjam' => 'Gilang Ramadhan',
+                'divisi' => 'Legal & Kepatuhan',
+                'keperluan' => 'Pemeriksaan keabsahan klausula hak tanggungan notaris',
+                'tanggal_pinjam' => '2026-08-01',
+                'tanggal_kembali_rencana' => '2026-08-07',
+                'status_sirkulasi' => 'kembali',
+                'status_approval' => 'disetujui',
+                'disetujui_oleh' => $pimpinan,
+                'tanggal_approval' => '2026-08-01 10:00:00',
+                'catatan_approval' => 'Disetujui untuk audit kepatuhan internal.',
+                'tanggal_kembali_aktual' => '2026-08-06',
+                'catatan_pengembalian' => 'Berkas dikembalikan dalam kondisi lengkap, segel utuh.',
+                'petugas_pengembalian' => $petugas,
+                'created_at' => '2026-08-01 08:00:00',
+                'updated_at' => '2026-08-06 14:00:00',
+            ],
         ]);
     }
 }

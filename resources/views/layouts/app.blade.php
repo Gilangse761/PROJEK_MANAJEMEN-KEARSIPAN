@@ -42,6 +42,13 @@
         .badge-lunas { background: #16a34a; color: #fff; }
         .badge-berjalan { background: #2563eb; color: #fff; }
         .badge-pdf { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+        .badge-terlambat { background: #dc2626; color: #fff; border: 1px solid #b91c1c; font-weight: bold; }
+        .badge-tersedia { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .badge-dipinjam { background: #ffedd5; color: #c2410c; border: 1px solid #fdba74; }
+        .badge-menunggu { background: #fef3c7; color: #b45309; border: 1px solid #fde047; }
+        .badge-disetujui { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
+        .badge-ditolak { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+        .badge-kembali { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
 
         /* Grid Utilities */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -79,14 +86,24 @@
 <body>
 @auth
     <nav>
-        <div>
-            <strong>e-Arsip KSP</strong> &nbsp;
-            <a href="/dashboard">Dashboard</a>
-            <a href="/arsip">Arsip (Pencarian & Registrasi)</a>
-            <a href="/klasifikasi">Klasifikasi</a>
-            <a href="/lokasi">Lokasi Depo</a>
+        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+            <strong style="font-size: 16px; letter-spacing: 0.5px;">🏦 e-Arsip KSP</strong>
+            <a href="{{ route('dashboard') }}">Dashboard</a>
+            <a href="{{ route('arsip.index') }}">Arsip Dokumen</a>
+            <a href="{{ route('sirkulasi.index') }}">Sirkulasi Berkas</a>
+            <a href="{{ route('penyusutan.index') }}">Penyusutan & BA</a>
+            <a href="{{ route('klasifikasi.index') }}">Klasifikasi</a>
+            <a href="{{ route('lokasi.index') }}">Lokasi Depo</a>
             @if (auth()->user()->role === 'pimpinan')
-                <a href="/approval">Approval</a>
+                <a href="{{ route('approval.index') }}" style="background: #f59e0b; color: #000; padding: 4px 10px; border-radius: 4px; font-weight: bold; text-decoration: none;">
+                    Approval Berkas
+                    @php
+                        $pendingApprCount = \App\Models\PeminjamanArsip::where('status_approval', 'menunggu')->count();
+                    @endphp
+                    @if ($pendingApprCount > 0)
+                        <span style="background: #b91c1c; color: #fff; padding: 1px 7px; border-radius: 10px; font-size: 11px; margin-left: 4px;">{{ $pendingApprCount }}</span>
+                    @endif
+                </a>
             @endif
         </div>
         <form method="POST" action="/logout">

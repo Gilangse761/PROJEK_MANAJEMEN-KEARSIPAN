@@ -61,6 +61,14 @@
                 </select>
             </div>
             <div>
+                <label for="status_ketersediaan">Ketersediaan Fisik di Rak</label>
+                <select id="status_ketersediaan" name="status_ketersediaan">
+                    <option value="">- Semua Ketersediaan -</option>
+                    <option value="tersedia" @selected(request('status_ketersediaan') === 'tersedia')>Tersedia di Depo</option>
+                    <option value="dipinjam" @selected(request('status_ketersediaan') === 'dipinjam')>Sedang Dipinjam Keluar</option>
+                </select>
+            </div>
+            <div>
                 <label for="id_lokasi">Titik Lokasi Depo / Brankas</label>
                 <select id="id_lokasi" name="id_lokasi">
                     <option value="">- Semua Lokasi -</option>
@@ -115,6 +123,11 @@
                                 <span class="badge" style="background:#f1f5f9; color:#94a3b8;">Fisik Tanpa Scan</span>
                             @endif
                             <span class="badge" style="background:#f8fafc; color:#64748b; border:1px solid #e2e8f0;">{{ $a->media_arsip }}</span>
+                            @if ($a->status_ketersediaan === 'tersedia')
+                                <span class="badge badge-tersedia">📦 Tersedia di Rak</span>
+                            @else
+                                <span class="badge badge-dipinjam">📤 Sedang Dipinjam</span>
+                            @endif
                         </div>
                     </td>
                     <td>
@@ -175,8 +188,13 @@
                             Kartu Arsip
                         </a>
                         @if ($a->hasDigitalFile())
-                            <a href="{{ route('arsip.preview', $a->id_arsip) }}" target="_blank" class="btn btn-sm btn-success" style="display:block; text-align:center;">
+                            <a href="{{ route('arsip.preview', $a->id_arsip) }}" target="_blank" class="btn btn-sm btn-success" style="display:block; text-align:center; margin-bottom:4px;">
                                 Lihat PDF
+                            </a>
+                        @endif
+                        @if (auth()->user()->role === 'petugas' && $a->status_ketersediaan === 'tersedia' && $a->status_arsip !== 'musnah')
+                            <a href="{{ route('sirkulasi.create', ['id_arsip' => $a->id_arsip]) }}" class="btn btn-sm" style="display:block; text-align:center; background:#475569; color:#fff;">
+                                📤 Pinjam
                             </a>
                         @endif
                     </td>
